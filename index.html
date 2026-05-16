@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vietnam Bike Care (Prototype)</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .header {
+            background-color: #007AFF;
+            color: white;
+            text-align: center;
+            padding: 15px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .screen {
+            display: none;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .screen.active {
+            display: block;
+        }
+        .btn {
+            display: block;
+            width: 80%;
+            max-width: 300px;
+            margin: 15px auto;
+            padding: 15px;
+            background-color: #007AFF;
+            color: white;
+            text-align: center;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .btn-back  { background-color: #8E8E93; }
+        .btn-map   { background-color: #34C759; }
+        /* [修正1] 無効化ボタンのスタイルを追加 */
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .card {
+            background: white;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .checkbox-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .advice-box {
+            background-color: #E5F1FF;
+            padding: 15px;
+            border-left: 5px solid #007AFF;
+            margin-top: 15px;
+            border-radius: 4px;
+        }
+        .check-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 16px;
+            gap: 10px;
+        }
+        .check-item span { font-size: 24px; }
+        /* [修正2] チェック完了時の取り消し線スタイル */
+        .check-item.done label { text-decoration: line-through; color: #8E8E93; }
+        /* [修正3] Toast通知（alertの代替） */
+        #toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: #333;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 24px;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
+            pointer-events: none;
+            z-index: 999;
+        }
+        #toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+        /* [修正4] スライダーと走行距離表示のスタイル */
+        .mileage-display {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        .range-label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        #range-mileage { width: 100%; }
+        /* [修正5] TOP画面のボタンエリア */
+        .top-menu { text-align: center; margin-top: 50px; }
+        /* [修正6] セレクトボックス */
+        #select-symptom {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+        }
+        #trouble-advice { display: none; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">Vietnam Bike Care</div>
+
+    <!-- Toast通知 -->
+    <div id="toast"></div>
+
+    <!-- 1. TOP画面 -->
+    <div id="screen-top" class="screen active">
+        <div class="top-menu">
+            <button class="btn" onclick="navigateTo('screen-input')">バイク種類入力</button>
+            <button class="btn" onclick="navigateTo('screen-pre-ride')">乗車前チェック</button>
+            <button class="btn" onclick="navigateTo('screen-maintenance')">定期メンテナンス</button>
+            <button class="btn" onclick="navigateTo('screen-trouble')">故障時アドバイス</button>
+        </div>
+    </div>
+
+    <!-- 2. バイク種類入力画面 -->
+    <div id="screen-input" class="screen">
+        <h2>車種・走行距離入力</h2>
+        <div class="card">
+            <div class="checkbox-group">
+                <!-- [修正7] 電気バイク変更時にMT選択を制御 -->
+                <label>
+                    <input type="checkbox" id="chk-electric" onchange="onElectricChange()">
+                    電気バイクですか？ (レ点=はい)
+                </label>
+                <label>
+                    <input type="checkbox" id="chk-manual" onchange="updateAdvice()">
+                    マニュアル車ですか？ (レ点=MT)
+                </label>
+            </div>
+
+            <label class="range-label" for="range-mileage">走行距離:</label>
+            <input type="range" id="range-mileage" min="0" max="50000" step="500" value="0"
+                   oninput="updateMileageText(this.value)">
+            <div id="mileage-value" class="mileage-display">0 km</div>
+
+            <button class="btn" onclick="saveData()" style="margin-top:15px;">設定を保存</button>
+        </div>
+
+        <div class="card">
+            <h3>💡 車種別アドバイス</h3>
+            <div id="advice-content" class="advice-box"></div>
+        </div>
+        <button class="btn btn-back" onclick="navigateTo('screen-top')">TOPに戻る</button>
+    </div>
+
+    <!-- 3. 乗車前チェック画面 -->
+    <div id="screen-pre-ride" class="screen">
+        <h2>乗車前チェック</h2>
+        <div class="card" id="checklist-container">
+            <!-- [修正8] チェックアイテムをJSで生成（状態管理を一元化） -->
+        </div>
+        <!-- [修正9] 完了メッセージ -->
+        <div id="checklist-complete" class="advice-box" style="display:none; text-align:center;">
+            ✅ 全項目チェック完了！安全なライドを！
+        </div>
+        <button class="btn btn-back" onclick="navigateTo('screen-top')">TOPに戻る</button>
+    </div>
+
+    <!-- 4. 定期メンテナンス画面 -->
+    <div id="screen-maintenance" class="screen">
+        <h2>定期メンテナンス時期</h2>
+        <div class="card" id="maintenance-list"></div>
+        <button class="btn btn-back" onclick="navigateTo('screen-top')">TOPに戻る</button>
+    </div>
+
+    <!-- 5. 故障時画面 -->
+    <div id="screen-trouble" class="screen">
+        <h2>故障時アドバイス</h2>
+        <div class="card">
+            <p>今のバイクの状態を選択してください：</p>
+            <select id="select-symptom" onchange="showTroubleAdvice()">
+                <option value="">-- 症状を選択 --</option>
+                <option value="engine">エンジンがかからない / 起動しない</option>
+                <option value="flat">タイヤがパンクした・空気が抜けた</option>
+                <option value="brake">ブレーキの効きが悪い</option>
+            </select>
+            <div id="trouble-advice" class="advice-box"></div>
+        </div>
+        <button class="btn btn-map" onclick="openGoogleMaps()">近くの修理店をGoogle Mapで探す</button>
+        <button class="btn btn-back" onclick="navigateTo('screen-top')">TOPに戻る</button>
+    </div>
+
+    <script>
+        // =====================================================
+        // アプリの状態（単一の状態オブジェクトで一元管理）
+        // [修正10] 状態をグローバル変数に分散させず一箇所にまとめる
+        // =====================================================
+        const state = {
+            isElectric: false,
+            isManual: false,
+            mileage: 0,
+        };
+
+        // チェックリスト項目（状態を配列で管理）
+        const checkItems = [
+            { emoji: '🪖', label: 'ヘルメットの着用',        checked: false },
+            { emoji: '🪪', label: '免許証の所持',            checked: false },
+            { emoji: '🛞', label: 'タイヤ空気圧の目視確認',  checked: false },
+            { emoji: '🛑', label: '前後ブレーキの効き具合',  checked: false },
+            { emoji: '💡', label: 'ライト・ウィンカー確認',  checked: false },
+            { emoji: '🔧', label: 'オイル量の確認',          checked: false },
+        ];
+
+        // =====================================================
+        // 画面遷移
+        // =====================================================
+        function navigateTo(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+
+            if (screenId === 'screen-maintenance') renderMaintenance();
+            if (screenId === 'screen-pre-ride')    renderChecklist();
+        }
+
+        // =====================================================
+        // Toast通知（alertの代替）
+        // [修正3] alert() をトースト通知に変更
+        // =====================================================
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2500);
+        }
+
+        // =====================================================
+        // バイク種類入力画面
+        // =====================================================
+
+        // [修正7] 電気バイク選択時にMTチェックを自動解除・無効化
+        function onElectricChange() {
+            state.isElectric = document.getElementById('chk-electric').checked;
+            const manualChk = document.getElementById('chk-manual');
+            if (state.isElectric) {
+                manualChk.checked = false;
+                manualChk.disabled = true;
+                state.isManual = false;
+            } else {
+                manualChk.disabled = false;
+            }
+            updateAdvice();
+        }
+
+        function updateMileageText(val) {
+            state.mileage = parseInt(val);
+            document.getElementById('mileage-value').textContent = val + ' km';
+            updateAdvice();
+        }
+
+        function updateAdvice() {
+            state.isElectric = document.getElementById('chk-electric').checked;
+            state.isManual   = document.getElementById('chk-manual').checked;
+
+            // [修正11] XSSリスク回避のため textContent / createElement を使用
+            const box = document.getElementById('advice-content');
+            box.innerHTML = ''; // クリア
+
+            const lines = [];
+            if (state.isElectric) {
+                lines.push('・【電気車】バッテリーの残量と端子の接続状態を定期的に確認してください。');
+                lines.push('・【電気車】モーター周辺への浸水に注意してください。');
+            } else {
+                lines.push('・【ガソリン車】エンジンオイルの定期交換（1,000km〜2,000km毎）が必要です。');
+                lines.push('・【ガソリン車】スパークプラグやエアクリーナーの汚れを確認してください。');
+            }
+            lines.push(state.isManual
+                ? '・【MT車】ドライブチェーンの張り具合の調整と、注油をこまめに行ってください。'
+                : '・【AT車】Vベルト（エンジンベルト）やプーリーの摩耗に注意してください。'
+            );
+
+            lines.forEach(text => {
+                const p = document.createElement('p');
+                p.style.margin = '4px 0';
+                p.textContent = text; // innerHTML ではなく textContent を使用
+                box.appendChild(p);
+            });
+        }
+
+        function saveData() {
+            localStorage.setItem('isElectric', state.isElectric);
+            localStorage.setItem('isManual',   state.isManual);
+            localStorage.setItem('mileage',    state.mileage);
+            showToast('設定を保存しました ✅');
+        }
+
+        function loadData() {
+            state.isElectric = localStorage.getItem('isElectric') === 'true';
+            state.isManual   = localStorage.getItem('isManual')   === 'true';
+            state.mileage    = parseInt(localStorage.getItem('mileage') || '0');
+
+            const elChk  = document.getElementById('chk-electric');
+            const mtChk  = document.getElementById('chk-manual');
+            elChk.checked = state.isElectric;
+            mtChk.checked = state.isManual;
+            // 読み込み時も電気バイク時はMT無効化
+            if (state.isElectric) mtChk.disabled = true;
+
+            document.getElementById('range-mileage').value     = state.mileage;
+            document.getElementById('mileage-value').textContent = state.mileage + ' km';
+
+            updateAdvice();
+        }
+
+        // =====================================================
+        // 乗車前チェック
+        // [修正8] JS でチェックリストを動的生成し状態を保持
+        // =====================================================
+        function renderChecklist() {
+            const container = document.getElementById('checklist-container');
+            container.innerHTML = '';
+
+            checkItems.forEach((item, i) => {
+                const div = document.createElement('div');
+                div.className = 'check-item' + (item.checked ? ' done' : '');
+                div.id = 'check-row-' + i;
+
+                const span = document.createElement('span');
+                span.textContent = item.emoji;
+
+                const label = document.createElement('label');
+                const chk = document.createElement('input');
+                chk.type = 'checkbox';
+                chk.checked = item.checked;
+                chk.addEventListener('change', () => {
+                    item.checked = chk.checked;
+                    div.className = 'check-item' + (item.checked ? ' done' : '');
+                    updateChecklistComplete();
+                });
+
+                label.appendChild(chk);
+                label.append(' ' + item.label);
+                div.appendChild(span);
+                div.appendChild(label);
+                container.appendChild(div);
+            });
+
+            updateChecklistComplete();
+        }
+
+        function updateChecklistComplete() {
+            const allDone = checkItems.every(item => item.checked);
+            document.getElementById('checklist-complete').style.display = allDone ? 'block' : 'none';
+        }
+
+        // =====================================================
+        // 定期メンテナンス
+        // [修正12] state オブジェクトから読むことで画面遷移順に依存しない
+        // =====================================================
+        function renderMaintenance() {
+            const container = document.getElementById('maintenance-list');
+            container.innerHTML = '';
+
+            const items = [];
+            items.push({ emoji: '🛑', label: 'ブレーキパッド/シュー', note: '走行状況に応じて交換' });
+            items.push({ emoji: '🔋', label: 'バッテリー (12V)',       note: '2〜3年毎に交換' });
+
+            if (state.isElectric) {
+                items.unshift({ emoji: '⚡', label: 'メインバッテリー', note: '定期的な電圧・容量チェック' });
+            } else {
+                items.unshift(
+                    { emoji: '🛢️', label: 'エンジンオイル',   note: '1,000km〜2,000km毎に交換' },
+                    { emoji: '💨', label: 'エアクリーナー',   note: '10,000km毎に交換' },
+                    { emoji: '🔩', label: 'スパークプラグ',   note: '10,000km〜15,000km毎に確認' }
+                );
+            }
+
+            if (state.isManual) {
+                items.push({ emoji: '⛓️', label: 'ドライブチェーン', note: '500km毎に注油・調整' });
+            } else {
+                items.push({ emoji: '🔗', label: 'エンジンベルト・プーリー', note: '20,000km前後に交換' });
+            }
+
+            const header = document.createElement('p');
+            header.innerHTML = '現在の走行距離: <b>' + state.mileage + ' km</b>';
+            container.appendChild(header);
+            container.appendChild(document.createElement('hr'));
+
+            items.forEach(item => {
+                const p = document.createElement('p');
+                // emoji と label は固定文字列なので安全
+                p.innerHTML = item.emoji + ' <b>' + item.label + ':</b> ' + item.note;
+                container.appendChild(p);
+            });
+        }
+
+        // =====================================================
+        // 故障時アドバイス
+        // =====================================================
+        const troubleAdvices = {
+            engine: {
+                cause:  'バッテリー上がり、プラグの汚れ、ガソリン切れ、電気系統の不具合。',
+                advice: 'キックスターターがある場合は試してください。スマートキーの場合は電池を確認してください。',
+            },
+            flat: {
+                cause:  '釘などの踏み抜き、空気圧不足によるリム打ち。',
+                advice: '無理に走行するとホイールを痛めます。近くの修理店（Tiệm sửa xe）を探してパンク修理を依頼してください。',
+            },
+            brake: {
+                cause:  'ブレーキパッドの摩耗、ブレーキワイヤーの伸び、液圧不足。',
+                advice: '非常に危険です。スピードを落とし、すぐに修理店で点検を受けてください。',
+            },
+        };
+
+        function showTroubleAdvice() {
+            const symptom  = document.getElementById('select-symptom').value;
+            const adviceBox = document.getElementById('trouble-advice');
+
+            if (!symptom) {
+                adviceBox.style.display = 'none';
+                return;
+            }
+
+            const data = troubleAdvices[symptom];
+            // [修正11] textContent で安全に描画
+            adviceBox.innerHTML = '';
+            const t = document.createElement('p');
+            t.innerHTML = '<b>原因の可能性:</b>';
+            const tText = document.createElement('span');
+            tText.textContent = ' ' + data.cause;
+            t.appendChild(tText);
+
+            const a = document.createElement('p');
+            a.innerHTML = '<b>アドバイス:</b>';
+            const aText = document.createElement('span');
+            aText.textContent = ' ' + data.advice;
+            a.appendChild(aText);
+
+            adviceBox.appendChild(t);
+            adviceBox.appendChild(a);
+            adviceBox.style.display = 'block';
+        }
+
+        // =====================================================
+        // Google Maps
+        // [修正13] ベトナム語検索ワードを追加
+        // =====================================================
+        function openGoogleMaps() {
+            const url = 'https://www.google.com/maps/search/?api=1&query=Tiệm+sửa+xe+máy';
+            window.open(url, '_blank');
+        }
+
+        // =====================================================
+        // 起動処理
+        // [修正14] window.onload → DOMContentLoaded に変更
+        // =====================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            renderChecklist();
+            updateAdvice();
+        });
+    </script>
+</body>
+</html>
