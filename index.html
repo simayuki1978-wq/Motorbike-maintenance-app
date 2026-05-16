@@ -73,11 +73,11 @@
             font-weight: bold;
             margin-bottom: 10px;
         }
-        .radio-group, .checkbox-group {
+        .radio-group {
             display: flex;
             gap: 20px;
         }
-        .radio-group label, .checkbox-group label {
+        .radio-group label {
             font-size: 16px;
             display: flex;
             align-items: center;
@@ -93,6 +93,38 @@
             font-size: 14px;
             line-height: 1.6;
         }
+        
+        /* --- [インパクトのある警告通知用スタイル] --- */
+        .alert-box {
+            background-color: #FFE5E5;
+            border-left: 5px solid #FF3B30;
+            color: #D70015;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            font-weight: bold;
+            animation: pulse 2s infinite; /* 視覚的インパクトのための点滅アニメーション */
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 59, 48, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
+        }
+        
+        /* 状態別の色バッジ */
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: white;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .badge-danger { background-color: #FF3B30; }  /* 赤: 要交換 */
+        .badge-warning { background-color: #FF9500; } /* 黄: もうすぐ */
+        .badge-safe { background-color: #34C759; }    /* 緑: 安全 */
+
         .check-item {
             display: flex;
             align-items: center;
@@ -235,7 +267,11 @@
 
     <!-- 4. 定期メンテナンス画面 -->
     <div id="screen-maintenance" class="screen">
-        <h2>定期メンテナンス時期 (二輪車メーカー推奨ベース)</h2>
+        <h2>定期メンテナンス時期</h2>
+        
+        <!-- 警告通知エリア（JavaScriptから動的に目立つ警告を挿入） -->
+        <div id="maintenance-alert"></div>
+
         <div class="card" id="maintenance-list"></div>
         <button class="btn btn-back" onclick="navigateTo('screen-top')">TOPに戻る</button>
     </div>
@@ -276,7 +312,6 @@
             mileage: 0,
         };
 
-        // バイク専用の乗車前チェック項目
         const checkItems = [
             { emoji: '🪖', label: 'ヘルメットのあご紐は締まっているか',   checked: false },
             { emoji: '🪪', label: '免許証・登録証（Cà vẹt xe）の所持',   checked: false },
@@ -301,7 +336,6 @@
             setTimeout(() => toast.classList.remove('show'), 2500);
         }
 
-        // 動力源切り替え時のトランスミッション制御（電気バイクは通常AT）
         function onPowerSourceChange() {
             state.isElectric = document.getElementById('rad-electric').checked;
             const radAt = document.getElementById('rad-at');
@@ -323,7 +357,6 @@
             updateAdvice();
         }
 
-        // 二輪車専用の車種別アドバイス分岐
         function updateAdvice() {
             state.isElectric = document.getElementById('rad-electric').checked;
             state.isManual   = document.getElementById('rad-mt').checked;
@@ -419,85 +452,128 @@
             document.getElementById('checklist-complete').style.display = allDone ? 'block' : 'none';
         }
 
-        // 二輪車メーカーの推奨値を再現した定期メンテナンスロジック
+        // --- [改良：距離判定＆警告アラート表示ロジック] ---
         function renderMaintenance() {
-            const container = document.getElementById('maintenance-list');
-            container.innerHTML = '';
+            const listContainer = document.getElementById('maintenance-list');
+            const alertContainer = document.getElementById('maintenance-alert');
+            
+            listContainer.innerHTML = '';
+            alertContainer.innerHTML = '';
 
-            const items = [];
-            items.push({ emoji: '🛑', label: 'ブレーキパッド / シュー', note: '5,000km毎に摩耗チェック。ベトナムのストップ＆ゴーでは減りが早いです。' });
-            items.push({ emoji: '🔋', label: 'スターターバッテリー (12V)', note: '2年毎に交換。セルの回りが弱くなったら寿命です。' });
-            items.push({ emoji: '🛞', label: '前後タイヤ交換', note: '15,000km〜20,000km。溝がなくなったりヒビ割れたら即交換。' });
+            // 1. バイクのタイプに合わせて、検証するメンテマスターデータを定義
+            const maintenanceMaster = [];
+            
+            // 全車共通
+            maintenanceMaster.push({ emoji: '🛑', label: 'ブレーキパッド / シュー', cycle: 5000, note: '5,000km毎にチェック。' });
+            maintenanceMaster.push({ emoji: '🔋', label: 'スターターバッテリー(12V)', cycle: 20000, note: '20,000km(約2年)毎に交換。' });
+            maintenanceMaster.push({ emoji: '🛞', label: '前後タイヤ交換', cycle: 15000, note: '15,000km毎に摩耗・溝チェック。' });
 
             if (!state.isElectric) {
-                items.unshift(
-                    { emoji: '🛢️', label: 'エンジンオイル', note: '1,500km毎に交換推奨。ベトナムの渋滞・高温下ではオイル劣化が早いです。' },
-                    { emoji: '💧', label: 'ギアオイル（ミッションオイル）', note: '5,000km〜8,000km毎に交換（スクーター特有）。' },
-                    { emoji: '💨', label: 'エアクリーナーエレメント', note: '10,000km毎に交換。砂埃が多い環境では早めの清掃が必要。' },
-                    { emoji: '🔩', label: 'スパークプラグ', note: '8,000km〜10,000km毎に交換。燃費悪化や始動不良を防ぎます。' }
-                );
-            } else {
-                items.unshift({ emoji: '⚡', label: 'メイン駆動用バッテリー', note: '充電効率が落ちてきたら、専門店でセルの電圧バランスを測定してください。' });
+                // ガソリン車専用
+                maintenanceMaster.push({ emoji: '🛢️', label: 'エンジンオイル', cycle: 15000, note: '本来は1,500km毎（プロトタイプ判定のため15,000kmまでの倍数でシミュレート）。' });
+                maintenanceMaster.push({ emoji: '💧', label: 'ギアオイル', cycle: 5000, note: '5,000km毎に交換（スクーター）。' });
+                maintenanceMaster.push({ emoji: '💨', label: 'エアクリーナーエレメント', cycle: 10000, note: '10,000km毎に新品交換。' });
+                maintenanceMaster.push({ emoji: '🔩', label: 'スパークプラグ', cycle: 8000, note: '8,000km毎に交換推奨。' });
             }
 
             if (state.isManual) {
-                items.push({ emoji: '⛓️', label: 'ドライブチェーン・スプロケット', note: '500km毎の洗浄・注油。15,000km前後で前後スプロケごと一式交換。' });
+                // MT車専用
+                maintenanceMaster.push({ emoji: '⛓️', label: 'ドライブチェーン調整', cycle: 1000, note: '1,000km毎に弛み調整・注油。' });
             } else {
-                items.push(
-                    { emoji: '🔗', label: '駆動用Vベルト', note: '20,000km毎に必ず定期交換。切れると自走不能になります。' },
-                    { emoji: '⚪', label: 'ウェイトローラー・プーリー', note: '10,000km毎に点検・清掃。摩耗すると加速に変な段付きが出ます。' }
-                );
+                // AT車専用
+                maintenanceMaster.push({ emoji: '🔗', label: '駆動用Vベルト', cycle: 20000, note: '20,000km毎に必ず交換。' });
+                maintenanceMaster.push({ emoji: '⚪', label: 'ウェイトローラー', cycle: 10000, note: '10,000km毎に点検。' });
             }
 
+            // 危険（要交換）なパーツの名前を入れていく配列
+            const dangerousParts = [];
+
+            // 現在の走行距離表示ヘッダー
             const header = document.createElement('p');
             header.innerHTML = '現在の走行距離: <b>' + state.mileage.toLocaleString() + ' km</b>';
-            container.appendChild(header);
-            container.appendChild(document.createElement('hr'));
+            listContainer.appendChild(header);
+            listContainer.appendChild(document.createElement('hr'));
 
-            items.forEach(item => {
+            // 2. 各パーツの状態を距離から計算
+            maintenanceMaster.forEach(item => {
+                let status = 'safe'; // 初期状態は安全
+                let badgeClass = 'badge-safe';
+                let badgeText = '良好';
+
+                if (state.mileage > 0) {
+                    // 現在の距離をサイクルで割った余りを計算
+                    const remainder = state.mileage % item.cycle;
+                    
+                    // 例: サイクルが5,000kmで、現在5,000kmちょうど、またはそれ以上の倍数の時
+                    if (remainder === 0 || state.mileage >= item.cycle && remainder < 500) {
+                        status = 'danger';
+                        badgeClass = 'badge-danger';
+                        badgeText = '今すぐ要点検・交換！';
+                        dangerousParts.push(item.label);
+                    } else if (item.cycle - remainder <= 500) {
+                        // 次のサイクルまであと500km以内のとき
+                        status = 'warning';
+                        badgeClass = 'badge-warning';
+                        badgeText = 'もうすぐ交換時期';
+                    }
+                }
+
+                // 画面へのリスト表示生成
                 const p = document.createElement('p');
-                p.innerHTML = item.emoji + ' <b>' + item.label + ':</b> ' + item.note;
-                container.appendChild(p);
+                p.style.margin = '12px 0';
+                p.innerHTML = item.emoji + ' <b>' + item.label + '</b>' + 
+                              '<span class="badge ' + badgeClass + '">' + badgeText + '</span><br>' +
+                              '<small style="color:#666;">（目安: ' + item.cycle.toLocaleString() + 'km毎 / ' + item.note + '）</small>';
+                listContainer.appendChild(p);
             });
+
+            // 3. ⚠️ インパクトのある警告アラートの動的表示
+            if (dangerousParts.length > 0) {
+                const alertBox = document.createElement('div');
+                alertBox.className = 'alert-box';
+                alertBox.innerHTML = '⚠️ 警告: 走行距離が交換目安に達しています！<br>' + 
+                                     '<span style="font-size:12px; font-weight:normal;">以下のパーツをすぐに確認してください：<br>・' + 
+                                     dangerousParts.join('<br>・') + '</span>';
+                alertContainer.appendChild(alertBox);
+            }
         }
 
-        // バイク特有の大量の故障症状と、現地に即したアドバイス
         const troubleAdvices = {
             engine_dead: {
                 cause:  'バッテリーの完全放電、メインヒューズ切れ、点火プラグの完全な寿命、またはスマートキーの電池切れ。',
-                advice: 'キックスターターを試してください（ガソリン車）。カチッとも言わない場合は電気系統の全損か、ブレーキスイッチの接触不良で安全装置が働きセルが回らない可能性があります。左右両方のブレーキを強く握りながらセルを押してみてください。',
+                advice: 'キックスターターを試してください（ガソリン車）。左右両方のブレーキを強く握りながらセルを押してみてください。',
             },
             cell_weak: {
                 cause:  'スターターバッテリー（12V）の電圧低下、またはセルモーター自体のブラシ摩耗。',
-                advice: '何度もセルボタンを押し続けると完全にバッテリーが死にます。キックペダルを踏んで始動を試みてください。かかったらそのまま15分以上走り、バッテリーを充電するか修理店で電圧を測ってもらってください。',
+                advice: '何度もセルボタンを押し続けると完全にバッテリーが死にます。キックペダルを踏んで始動を試みてください。',
             },
             rain_stop: {
                 cause:  'プラグコードへの浸水によるリーク（漏電）、または吸気口・クランクケースからの浸水（ベトナム名物：Ngập nước）。',
-                advice: '非常に多い故障です。絶対に無理に何度もセルを回さないでください！シリンダー内に水が入った状態で無理に回すと、エンジンが完全に破壊（ウォーターハンマー現象）されます。プラグを抜いて水を抜く作業が必要です。すぐに近くのTiệm sửa xeに押し歩いて持ち込んでください。',
+                advice: '絶対に無理に何度もセルを回さないでください！エンジンが完全に破壊されます。すぐに近くのTiệm sửa xeに持ち込んでください。',
             },
             flat_tire: {
                 cause:  '道路上の釘やガラス片の踏み抜き、またはバルブ（空気の注ぎ口）の劣化・亀裂。',
-                advice: 'ベトナムの道路には尖ったゴミが多いです。パンクしたまま走るとタイヤだけでなくホイール（リム）が変形し、数倍の修理費になります。すぐに走行をやめ、バイクを押して最寄りの修理店へ行き、パッチ修理（Vá xe）またはチューブ・タイヤ交換を依頼してください。',
+                advice: 'パンクしたまま走るとホイール（リム）が変形し高額になります。バイクを押して最寄りの修理店へ行き、パッチ修理（Vá xe）を依頼してください。',
             },
             brake_poor: {
-                cause:  'ブレーキパッドまたはディスクの限界摩耗、ブレーキフルード（液）の漏れや空気混入、あるいはワイヤーの固着・伸び。',
-                advice: 'ベトナムの過酷なトラフィックではブレーキの故障は命に関わります。フロントだけ、またはリアだけで速度を極限まで落としてゆっくり走行し、一番近い修理店へ直行してください。パッド交換かフルードの空気抜き（xả gió）が必要です。',
+                cause:  'ブレーキパッドまたはディスクの限界摩耗、ブレーキフルード（液）の漏れや空気混入。',
+                advice: '非常に危険です。スピードを落としてゆっくり走行し、一番近い修理店へ直行してください。',
             },
             belt_slip: {
-                cause:  'スクーター（AT車）のVベルトの摩耗・亀裂、またはプーリー内のウェイトローラーの偏摩耗、あるいはクランクケース内へのオイル漏れ。',
-                advice: 'エンジンは回るのに進まない場合、ベルトが滑っているか、最悪の場合今にも千切れかけています。完全に切れると坂道などで全く動かなくなります。早急に駆動系の点検（Vệ sinh nồi / Thay dây curoa）を修理店で依頼してください。',
+                cause:  'スクーター（AT車）のVベルトの摩耗・亀裂、またはプーリー内のウェイトローラーの偏摩耗。',
+                advice: '完全に切れると自走不能になります。早急に駆動系の点検（Vệ sinh nồi / Thay dây curoa）を修理店で依頼してください。',
             },
             chain_noise: {
-                cause:  'マニュアル車（MT車/カブタイプなど）のチェーンの激しい弛み、給油不足によるサビ、スプロケット（歯車）のトゲトゲ磨耗。',
-                advice: 'チェーンが弛みすぎると、走行中に外れてホイールにロックし、大事故に繋がります。またはクランクケースを突き破る危険もあります。近くの修理店でチェーン調整（Tăng sên）と注油を頼んでください。数百円（数万ドン）ですぐにやってくれます。',
+                cause:  'マニュアル車（MT車/カブタイプなど）のチェーンの激しい弛み、給油不足によるサビ。',
+                advice: 'チェーンが外れると大事故に繋がります。近くの修理店でチェーン調整（Tăng sên）と注油を頼んでください。',
             },
             white_smoke: {
-                cause:  'エンジンオイルが燃焼室に入り込んで一緒に燃えている（オイル下がり・オイル上がり）。ピストンリングの摩耗。',
-                advice: 'エンジンオイルが異常に減っている可能性が高いです。そのまま走り続けると焼き付きを起こし、エンジン全体の交換（高額修理）になります。すぐにオイル量をチェックし、つぎ足すか、修理店でピストン周りのオーバーホールを相談してください。',
+                cause:  'エンジンオイルが燃焼室に入り込んで一緒に燃えている（オイル下がり・オイル上がり）。',
+                advice: 'エンジンオイルが減少しています。そのまま走り続けると焼き付きを起こすので、すぐにオイル量をチェックしてください。',
             },
             black_smoke: {
-                cause:  '燃料が濃すぎる（不完全燃焼）。エアクリーナーの激しい詰まり、キャブレターの不調、またはインジェクションのセンサー異常。',
-                advice: '空気が足りずにガソリンばかりが燃えています。燃費が極端に悪くなっているはずです。まずはエアクリーナーエレメントの清掃または交換を試してください。劇的に改善することが多いです。',
+                cause:  '燃料が濃すぎる（不完全燃焼）。エアクリーナーの激しい詰まり、キャブレターの不調。',
+                advice: '空気が足りていません。まずはエアクリーナーエレメントの清掃または交換を修理店に相談してください。',
             }
         };
 
