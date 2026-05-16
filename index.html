@@ -46,7 +46,8 @@
         }
         .btn-back  { background-color: #8E8E93; }
         .btn-map   { background-color: #34C759; }
-        /* [修正1] 無効化ボタンのスタイルを追加 */
+        .btn-action { background-color: #FF9500; }
+        
         .btn:disabled {
             opacity: 0.4;
             cursor: not-allowed;
@@ -58,10 +59,30 @@
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .checkbox-group label {
-            display: block;
+        .input-section {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px dashed #ddd;
+        }
+        .input-section:last-child {
+            border-bottom: none;
+        }
+        .input-title {
+            font-size: 14px;
+            color: #666;
+            font-weight: bold;
             margin-bottom: 10px;
+        }
+        .radio-group, .checkbox-group {
+            display: flex;
+            gap: 20px;
+        }
+        .radio-group label, .checkbox-group label {
             font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
         }
         .advice-box {
             background-color: #E5F1FF;
@@ -69,6 +90,8 @@
             border-left: 5px solid #007AFF;
             margin-top: 15px;
             border-radius: 4px;
+            font-size: 14px;
+            line-height: 1.6;
         }
         .check-item {
             display: flex;
@@ -78,9 +101,8 @@
             gap: 10px;
         }
         .check-item span { font-size: 24px; }
-        /* [修正2] チェック完了時の取り消し線スタイル */
         .check-item.done label { text-decoration: line-through; color: #8E8E93; }
-        /* [修正3] Toast通知（alertの代替） */
+        
         #toast {
             position: fixed;
             bottom: 30px;
@@ -100,24 +122,42 @@
             opacity: 1;
             transform: translateX(-50%) translateY(0);
         }
-        /* [修正4] スライダーと走行距離表示のスタイル */
+        
+        .mileage-container {
+            background: #fdfdfd;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+        }
         .mileage-display {
-            font-size: 18px;
+            font-size: 24px;
             font-weight: bold;
-            margin-top: 5px;
+            color: #007AFF;
+            text-align: center;
+            margin: 10px 0;
+            background: #eef6ff;
+            padding: 10px;
+            border-radius: 6px;
         }
-        .range-label {
-            display: block;
-            margin-bottom: 5px;
+        #range-mileage { 
+            width: 100%; 
+            margin: 15px 0;
         }
-        #range-mileage { width: 100%; }
-        /* [修正5] TOP画面のボタンエリア */
+        .range-ticks {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #8e8e93;
+            padding: 0 5px;
+        }
+        
         .top-menu { text-align: center; margin-top: 50px; }
-        /* [修正6] セレクトボックス */
         #select-symptom {
             width: 100%;
             padding: 10px;
             font-size: 16px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
         }
         #trouble-advice { display: none; margin-top: 15px; }
     </style>
@@ -143,28 +183,41 @@
     <div id="screen-input" class="screen">
         <h2>車種・走行距離入力</h2>
         <div class="card">
-            <div class="checkbox-group">
-                <!-- [修正7] 電気バイク変更時にMT選択を制御 -->
-                <label>
-                    <input type="checkbox" id="chk-electric" onchange="onElectricChange()">
-                    電気バイクですか？ (レ点=はい)
-                </label>
-                <label>
-                    <input type="checkbox" id="chk-manual" onchange="updateAdvice()">
-                    マニュアル車ですか？ (レ点=MT)
-                </label>
+            <!-- 1段目: パワーソースの選択 -->
+            <div class="input-section">
+                <div class="input-title">1. バイクの動力を選択</div>
+                <div class="radio-group">
+                    <label><input type="radio" name="power-source" id="rad-gasoline" checked onchange="onPowerSourceChange()"> ガソリンバイク</label>
+                    <label><input type="radio" name="power-source" id="rad-electric" onchange="onPowerSourceChange()"> 電気バイク</label>
+                </div>
             </div>
 
-            <label class="range-label" for="range-mileage">走行距離:</label>
-            <input type="range" id="range-mileage" min="0" max="50000" step="500" value="0"
-                   oninput="updateMileageText(this.value)">
-            <div id="mileage-value" class="mileage-display">0 km</div>
+            <!-- 2段目: トランスミッションの選択 -->
+            <div class="input-section">
+                <div class="input-title">2. 変速方式を選択</div>
+                <div class="radio-group">
+                    <label><input type="radio" name="transmission" id="rad-at" checked onchange="updateAdvice()"> オートマチック (AT / スクーター)</label>
+                    <label><input type="radio" name="transmission" id="rad-mt" onchange="updateAdvice()"> マニュアル (MT / ギア車)</label>
+                </div>
+            </div>
 
-            <button class="btn" onclick="saveData()" style="margin-top:15px;">設定を保存</button>
+            <!-- 3段目: 走行距離入力 -->
+            <div class="input-section">
+                <div class="input-title">3. 現在の走行距離 (1,000km単位でスクロール)</div>
+                <div class="mileage-container">
+                    <input type="range" id="range-mileage" min="0" max="50000" step="1000" value="0" oninput="updateMileageText(this.value)">
+                    <div class="range-ticks">
+                        <span>0k</span><span>10k</span><span>20k</span><span>30k</span><span>40k</span><span>50k</span>
+                    </div>
+                    <div id="mileage-value" class="mileage-display">0 km</div>
+                </div>
+            </div>
+
+            <button class="btn btn-action" onclick="saveData()">この設定で決定・保存</button>
         </div>
 
         <div class="card">
-            <h3>💡 車種別アドバイス</h3>
+            <h3>💡 車種別点検アドバイス</h3>
             <div id="advice-content" class="advice-box"></div>
         </div>
         <button class="btn btn-back" onclick="navigateTo('screen-top')">TOPに戻る</button>
@@ -172,65 +225,67 @@
 
     <!-- 3. 乗車前チェック画面 -->
     <div id="screen-pre-ride" class="screen">
-        <h2>乗車前チェック</h2>
-        <div class="card" id="checklist-container">
-            <!-- [修正8] チェックアイテムをJSで生成（状態管理を一元化） -->
-        </div>
-        <!-- [修正9] 完了メッセージ -->
+        <h2>乗車前チェック (二輪車用)</h2>
+        <div class="card" id="checklist-container"></div>
         <div id="checklist-complete" class="advice-box" style="display:none; text-align:center;">
-            ✅ 全項目チェック完了！安全なライドを！
+            ✅ 全項目チェック完了！安全運転でいってらっしゃい！（Nón bảo hiểm ok!）
         </div>
         <button class="btn btn-back" onclick="navigateTo('screen-top')">TOPに戻る</button>
     </div>
 
     <!-- 4. 定期メンテナンス画面 -->
     <div id="screen-maintenance" class="screen">
-        <h2>定期メンテナンス時期</h2>
+        <h2>定期メンテナンス時期 (二輪車メーカー推奨ベース)</h2>
         <div class="card" id="maintenance-list"></div>
         <button class="btn btn-back" onclick="navigateTo('screen-top')">TOPに戻る</button>
     </div>
 
     <!-- 5. 故障時画面 -->
     <div id="screen-trouble" class="screen">
-        <h2>故障時アドバイス</h2>
+        <h2>故障時アドバイス (バイク専用)</h2>
         <div class="card">
-            <p>今のバイクの状態を選択してください：</p>
+            <p>今のバイクの症状を選択してください：</p>
             <select id="select-symptom" onchange="showTroubleAdvice()">
-                <option value="">-- 症状を選択 --</option>
-                <option value="engine">エンジンがかからない / 起動しない</option>
-                <option value="flat">タイヤがパンクした・空気が抜けた</option>
-                <option value="brake">ブレーキの効きが悪い</option>
+                <option value="">-- 具体的な症状を選択 --</option>
+                <optgroup label="エンジン・起動トラブル">
+                    <option value="engine_dead">セルが回らず、キックでも全くエンジンがかからない</option>
+                    <option value="cell_weak">セルモーターの回りが弱く、カチカチ音がする</option>
+                    <option value="rain_stop">雨の中を走行中、または冠水路を通過した後に突然止まった</option>
+                </optgroup>
+                <optgroup label="走行中の異変・足回り">
+                    <option value="flat_tire">ハンドルが重い・タイヤが完全に潰れてパンクしている</option>
+                    <option value="brake_poor">ブレーキレバーがフカフカして効きが極端に悪い</option>
+                    <option value="belt_slip">アクセルを開けても加速せず、ウーと音がして滑る感じがする</option>
+                    <option value="chain_noise">走行中に足元からガチャガチャと激しい金属音がする</option>
+                </optgroup>
+                <optgroup label="排気・煙の異常">
+                    <option value="white_smoke">マフラーから白い煙が大量に出て、焦げ臭い匂いがする</option>
+                    <option value="black_smoke">マフラーから黒い煙が出て、エンジンの回転が不安定</option>
+                </optgroup>
             </select>
             <div id="trouble-advice" class="advice-box"></div>
         </div>
-        <button class="btn btn-map" onclick="openGoogleMaps()">近くの修理店をGoogle Mapで探す</button>
+        <button class="btn btn-map" onclick="openGoogleMaps()">近くの修理店（Tiệm sửa xe）をGoogle Mapで探す</button>
         <button class="btn btn-back" onclick="navigateTo('screen-top')">TOPに戻る</button>
     </div>
 
     <script>
-        // =====================================================
-        // アプリの状態（単一の状態オブジェクトで一元管理）
-        // [修正10] 状態をグローバル変数に分散させず一箇所にまとめる
-        // =====================================================
         const state = {
             isElectric: false,
             isManual: false,
             mileage: 0,
         };
 
-        // チェックリスト項目（状態を配列で管理）
+        // バイク専用の乗車前チェック項目
         const checkItems = [
-            { emoji: '🪖', label: 'ヘルメットの着用',        checked: false },
-            { emoji: '🪪', label: '免許証の所持',            checked: false },
-            { emoji: '🛞', label: 'タイヤ空気圧の目視確認',  checked: false },
-            { emoji: '🛑', label: '前後ブレーキの効き具合',  checked: false },
-            { emoji: '💡', label: 'ライト・ウィンカー確認',  checked: false },
-            { emoji: '🔧', label: 'オイル量の確認',          checked: false },
+            { emoji: '🪖', label: 'ヘルメットのあご紐は締まっているか',   checked: false },
+            { emoji: '🪪', label: '免許証・登録証（Cà vẹt xe）の所持',   checked: false },
+            { emoji: '🛞', label: 'タイヤの空気圧（指で押して凹まないか）', checked: false },
+            { emoji: '🛑', label: '前後ブレーキレバーの握りしろと効き',     checked: false },
+            { emoji: '💡', label: 'ヘッドライト・ウインカー・ブレーキランプ点灯',checked: false },
+            { emoji: '⛽', label: '燃料残量（またはバッテリー残量）の確認', checked: false },
         ];
 
-        // =====================================================
-        // 画面遷移
-        // =====================================================
         function navigateTo(screenId) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(screenId).classList.add('active');
@@ -239,10 +294,6 @@
             if (screenId === 'screen-pre-ride')    renderChecklist();
         }
 
-        // =====================================================
-        // Toast通知（alertの代替）
-        // [修正3] alert() をトースト通知に変更
-        // =====================================================
         function showToast(message) {
             const toast = document.getElementById('toast');
             toast.textContent = message;
@@ -250,55 +301,55 @@
             setTimeout(() => toast.classList.remove('show'), 2500);
         }
 
-        // =====================================================
-        // バイク種類入力画面
-        // =====================================================
-
-        // [修正7] 電気バイク選択時にMTチェックを自動解除・無効化
-        function onElectricChange() {
-            state.isElectric = document.getElementById('chk-electric').checked;
-            const manualChk = document.getElementById('chk-manual');
+        // 動力源切り替え時のトランスミッション制御（電気バイクは通常AT）
+        function onPowerSourceChange() {
+            state.isElectric = document.getElementById('rad-electric').checked;
+            const radAt = document.getElementById('rad-at');
+            const radMt = document.getElementById('rad-mt');
+            
             if (state.isElectric) {
-                manualChk.checked = false;
-                manualChk.disabled = true;
+                radAt.checked = true;
+                radMt.disabled = true;
                 state.isManual = false;
             } else {
-                manualChk.disabled = false;
+                radMt.disabled = false;
             }
             updateAdvice();
         }
 
         function updateMileageText(val) {
             state.mileage = parseInt(val);
-            document.getElementById('mileage-value').textContent = val + ' km';
+            document.getElementById('mileage-value').textContent = state.mileage.toLocaleString() + ' km';
             updateAdvice();
         }
 
+        // 二輪車専用の車種別アドバイス分岐
         function updateAdvice() {
-            state.isElectric = document.getElementById('chk-electric').checked;
-            state.isManual   = document.getElementById('chk-manual').checked;
+            state.isElectric = document.getElementById('rad-electric').checked;
+            state.isManual   = document.getElementById('rad-mt').checked;
 
-            // [修正11] XSSリスク回避のため textContent / createElement を使用
             const box = document.getElementById('advice-content');
-            box.innerHTML = ''; // クリア
+            box.innerHTML = '';
 
             const lines = [];
             if (state.isElectric) {
-                lines.push('・【電気車】バッテリーの残量と端子の接続状態を定期的に確認してください。');
-                lines.push('・【電気車】モーター周辺への浸水に注意してください。');
+                lines.push('・【電気バイク】高電圧バッテリーの熱や端子の腐食をチェックしてください。');
+                lines.push('・【電気バイク】洗車時や激しい雨天時、インホイールモーターへの浸水に注意が必要です。');
             } else {
-                lines.push('・【ガソリン車】エンジンオイルの定期交換（1,000km〜2,000km毎）が必要です。');
-                lines.push('・【ガソリン車】スパークプラグやエアクリーナーの汚れを確認してください。');
+                lines.push('・【ガソリンバイク】4輪車と異なり、1,000km〜2,000kmでのエンジンオイル交換が必須です。寿命が短いです。');
+                lines.push('・【ガソリンバイク】点火プラグの煤（すす）の付着や、エアクリーナーの埃詰まりが不調に直結します。');
             }
-            lines.push(state.isManual
-                ? '・【MT車】ドライブチェーンの張り具合の調整と、注油をこまめに行ってください。'
-                : '・【AT車】Vベルト（エンジンベルト）やプーリーの摩耗に注意してください。'
-            );
+            
+            if (state.isManual) {
+                lines.push('・【マニュアル車 / ギア車】露出しているドライブチェーンの弛み（たるみ）の調整と、500km毎の注油が必須です。');
+            } else {
+                lines.push('・【オートマチック車 / スクーター】クランクケース内のVベルト、ウェイトローラー、プーリーの定期点検が命です。');
+            }
 
             lines.forEach(text => {
                 const p = document.createElement('p');
                 p.style.margin = '4px 0';
-                p.textContent = text; // innerHTML ではなく textContent を使用
+                p.textContent = text;
                 box.appendChild(p);
             });
         }
@@ -307,7 +358,7 @@
             localStorage.setItem('isElectric', state.isElectric);
             localStorage.setItem('isManual',   state.isManual);
             localStorage.setItem('mileage',    state.mileage);
-            showToast('設定を保存しました ✅');
+            showToast('バイクの種類と距離を保存しました 🛵 ✅');
         }
 
         function loadData() {
@@ -315,23 +366,22 @@
             state.isManual   = localStorage.getItem('isManual')   === 'true';
             state.mileage    = parseInt(localStorage.getItem('mileage') || '0');
 
-            const elChk  = document.getElementById('chk-electric');
-            const mtChk  = document.getElementById('chk-manual');
-            elChk.checked = state.isElectric;
-            mtChk.checked = state.isManual;
-            // 読み込み時も電気バイク時はMT無効化
-            if (state.isElectric) mtChk.disabled = true;
+            document.getElementById('rad-gasoline').checked = !state.isElectric;
+            document.getElementById('rad-electric').checked  = state.isElectric;
+            
+            const radAt = document.getElementById('rad-at');
+            const radMt = document.getElementById('rad-mt');
+            radAt.checked = !state.isManual;
+            radMt.checked = state.isManual;
+            
+            if (state.isElectric) radMt.disabled = true;
 
-            document.getElementById('range-mileage').value     = state.mileage;
-            document.getElementById('mileage-value').textContent = state.mileage + ' km';
+            document.getElementById('range-mileage').value = state.mileage;
+            document.getElementById('mileage-value').textContent = state.mileage.toLocaleString() + ' km';
 
             updateAdvice();
         }
 
-        // =====================================================
-        // 乗車前チェック
-        // [修正8] JS でチェックリストを動的生成し状態を保持
-        // =====================================================
         function renderChecklist() {
             const container = document.getElementById('checklist-container');
             container.innerHTML = '';
@@ -369,63 +419,86 @@
             document.getElementById('checklist-complete').style.display = allDone ? 'block' : 'none';
         }
 
-        // =====================================================
-        // 定期メンテナンス
-        // [修正12] state オブジェクトから読むことで画面遷移順に依存しない
-        // =====================================================
+        // 二輪車メーカーの推奨値を再現した定期メンテナンスロジック
         function renderMaintenance() {
             const container = document.getElementById('maintenance-list');
             container.innerHTML = '';
 
             const items = [];
-            items.push({ emoji: '🛑', label: 'ブレーキパッド/シュー', note: '走行状況に応じて交換' });
-            items.push({ emoji: '🔋', label: 'バッテリー (12V)',       note: '2〜3年毎に交換' });
+            items.push({ emoji: '🛑', label: 'ブレーキパッド / シュー', note: '5,000km毎に摩耗チェック。ベトナムのストップ＆ゴーでは減りが早いです。' });
+            items.push({ emoji: '🔋', label: 'スターターバッテリー (12V)', note: '2年毎に交換。セルの回りが弱くなったら寿命です。' });
+            items.push({ emoji: '🛞', label: '前後タイヤ交換', note: '15,000km〜20,000km。溝がなくなったりヒビ割れたら即交換。' });
 
-            if (state.isElectric) {
-                items.unshift({ emoji: '⚡', label: 'メインバッテリー', note: '定期的な電圧・容量チェック' });
-            } else {
+            if (!state.isElectric) {
                 items.unshift(
-                    { emoji: '🛢️', label: 'エンジンオイル',   note: '1,000km〜2,000km毎に交換' },
-                    { emoji: '💨', label: 'エアクリーナー',   note: '10,000km毎に交換' },
-                    { emoji: '🔩', label: 'スパークプラグ',   note: '10,000km〜15,000km毎に確認' }
+                    { emoji: '🛢️', label: 'エンジンオイル', note: '1,500km毎に交換推奨。ベトナムの渋滞・高温下ではオイル劣化が早いです。' },
+                    { emoji: '💧', label: 'ギアオイル（ミッションオイル）', note: '5,000km〜8,000km毎に交換（スクーター特有）。' },
+                    { emoji: '💨', label: 'エアクリーナーエレメント', note: '10,000km毎に交換。砂埃が多い環境では早めの清掃が必要。' },
+                    { emoji: '🔩', label: 'スパークプラグ', note: '8,000km〜10,000km毎に交換。燃費悪化や始動不良を防ぎます。' }
                 );
+            } else {
+                items.unshift({ emoji: '⚡', label: 'メイン駆動用バッテリー', note: '充電効率が落ちてきたら、専門店でセルの電圧バランスを測定してください。' });
             }
 
             if (state.isManual) {
-                items.push({ emoji: '⛓️', label: 'ドライブチェーン', note: '500km毎に注油・調整' });
+                items.push({ emoji: '⛓️', label: 'ドライブチェーン・スプロケット', note: '500km毎の洗浄・注油。15,000km前後で前後スプロケごと一式交換。' });
             } else {
-                items.push({ emoji: '🔗', label: 'エンジンベルト・プーリー', note: '20,000km前後に交換' });
+                items.push(
+                    { emoji: '🔗', label: '駆動用Vベルト', note: '20,000km毎に必ず定期交換。切れると自走不能になります。' },
+                    { emoji: '⚪', label: 'ウェイトローラー・プーリー', note: '10,000km毎に点検・清掃。摩耗すると加速に変な段付きが出ます。' }
+                );
             }
 
             const header = document.createElement('p');
-            header.innerHTML = '現在の走行距離: <b>' + state.mileage + ' km</b>';
+            header.innerHTML = '現在の走行距離: <b>' + state.mileage.toLocaleString() + ' km</b>';
             container.appendChild(header);
             container.appendChild(document.createElement('hr'));
 
             items.forEach(item => {
                 const p = document.createElement('p');
-                // emoji と label は固定文字列なので安全
                 p.innerHTML = item.emoji + ' <b>' + item.label + ':</b> ' + item.note;
                 container.appendChild(p);
             });
         }
 
-        // =====================================================
-        // 故障時アドバイス
-        // =====================================================
+        // バイク特有の大量の故障症状と、現地に即したアドバイス
         const troubleAdvices = {
-            engine: {
-                cause:  'バッテリー上がり、プラグの汚れ、ガソリン切れ、電気系統の不具合。',
-                advice: 'キックスターターがある場合は試してください。スマートキーの場合は電池を確認してください。',
+            engine_dead: {
+                cause:  'バッテリーの完全放電、メインヒューズ切れ、点火プラグの完全な寿命、またはスマートキーの電池切れ。',
+                advice: 'キックスターターを試してください（ガソリン車）。カチッとも言わない場合は電気系統の全損か、ブレーキスイッチの接触不良で安全装置が働きセルが回らない可能性があります。左右両方のブレーキを強く握りながらセルを押してみてください。',
             },
-            flat: {
-                cause:  '釘などの踏み抜き、空気圧不足によるリム打ち。',
-                advice: '無理に走行するとホイールを痛めます。近くの修理店（Tiệm sửa xe）を探してパンク修理を依頼してください。',
+            cell_weak: {
+                cause:  'スターターバッテリー（12V）の電圧低下、またはセルモーター自体のブラシ摩耗。',
+                advice: '何度もセルボタンを押し続けると完全にバッテリーが死にます。キックペダルを踏んで始動を試みてください。かかったらそのまま15分以上走り、バッテリーを充電するか修理店で電圧を測ってもらってください。',
             },
-            brake: {
-                cause:  'ブレーキパッドの摩耗、ブレーキワイヤーの伸び、液圧不足。',
-                advice: '非常に危険です。スピードを落とし、すぐに修理店で点検を受けてください。',
+            rain_stop: {
+                cause:  'プラグコードへの浸水によるリーク（漏電）、または吸気口・クランクケースからの浸水（ベトナム名物：Ngập nước）。',
+                advice: '非常に多い故障です。絶対に無理に何度もセルを回さないでください！シリンダー内に水が入った状態で無理に回すと、エンジンが完全に破壊（ウォーターハンマー現象）されます。プラグを抜いて水を抜く作業が必要です。すぐに近くのTiệm sửa xeに押し歩いて持ち込んでください。',
             },
+            flat_tire: {
+                cause:  '道路上の釘やガラス片の踏み抜き、またはバルブ（空気の注ぎ口）の劣化・亀裂。',
+                advice: 'ベトナムの道路には尖ったゴミが多いです。パンクしたまま走るとタイヤだけでなくホイール（リム）が変形し、数倍の修理費になります。すぐに走行をやめ、バイクを押して最寄りの修理店へ行き、パッチ修理（Vá xe）またはチューブ・タイヤ交換を依頼してください。',
+            },
+            brake_poor: {
+                cause:  'ブレーキパッドまたはディスクの限界摩耗、ブレーキフルード（液）の漏れや空気混入、あるいはワイヤーの固着・伸び。',
+                advice: 'ベトナムの過酷なトラフィックではブレーキの故障は命に関わります。フロントだけ、またはリアだけで速度を極限まで落としてゆっくり走行し、一番近い修理店へ直行してください。パッド交換かフルードの空気抜き（xả gió）が必要です。',
+            },
+            belt_slip: {
+                cause:  'スクーター（AT車）のVベルトの摩耗・亀裂、またはプーリー内のウェイトローラーの偏摩耗、あるいはクランクケース内へのオイル漏れ。',
+                advice: 'エンジンは回るのに進まない場合、ベルトが滑っているか、最悪の場合今にも千切れかけています。完全に切れると坂道などで全く動かなくなります。早急に駆動系の点検（Vệ sinh nồi / Thay dây curoa）を修理店で依頼してください。',
+            },
+            chain_noise: {
+                cause:  'マニュアル車（MT車/カブタイプなど）のチェーンの激しい弛み、給油不足によるサビ、スプロケット（歯車）のトゲトゲ磨耗。',
+                advice: 'チェーンが弛みすぎると、走行中に外れてホイールにロックし、大事故に繋がります。またはクランクケースを突き破る危険もあります。近くの修理店でチェーン調整（Tăng sên）と注油を頼んでください。数百円（数万ドン）ですぐにやってくれます。',
+            },
+            white_smoke: {
+                cause:  'エンジンオイルが燃焼室に入り込んで一緒に燃えている（オイル下がり・オイル上がり）。ピストンリングの摩耗。',
+                advice: 'エンジンオイルが異常に減っている可能性が高いです。そのまま走り続けると焼き付きを起こし、エンジン全体の交換（高額修理）になります。すぐにオイル量をチェックし、つぎ足すか、修理店でピストン周りのオーバーホールを相談してください。',
+            },
+            black_smoke: {
+                cause:  '燃料が濃すぎる（不完全燃焼）。エアクリーナーの激しい詰まり、キャブレターの不調、またはインジェクションのセンサー異常。',
+                advice: '空気が足りずにガソリンばかりが燃えています。燃費が極端に悪くなっているはずです。まずはエアクリーナーエレメントの清掃または交換を試してください。劇的に改善することが多いです。',
+            }
         };
 
         function showTroubleAdvice() {
@@ -438,16 +511,16 @@
             }
 
             const data = troubleAdvices[symptom];
-            // [修正11] textContent で安全に描画
             adviceBox.innerHTML = '';
+            
             const t = document.createElement('p');
-            t.innerHTML = '<b>原因の可能性:</b>';
+            t.innerHTML = '<b>🔍 原因の可能性:</b>';
             const tText = document.createElement('span');
             tText.textContent = ' ' + data.cause;
             t.appendChild(tText);
 
             const a = document.createElement('p');
-            a.innerHTML = '<b>アドバイス:</b>';
+            a.innerHTML = '<b>🛠️ 対処法・アドバイス:</b>';
             const aText = document.createElement('span');
             aText.textContent = ' ' + data.advice;
             a.appendChild(aText);
@@ -457,19 +530,11 @@
             adviceBox.style.display = 'block';
         }
 
-        // =====================================================
-        // Google Maps
-        // [修正13] ベトナム語検索ワードを追加
-        // =====================================================
         function openGoogleMaps() {
             const url = 'https://www.google.com/maps/search/?api=1&query=Tiệm+sửa+xe+máy';
             window.open(url, '_blank');
         }
 
-        // =====================================================
-        // 起動処理
-        // [修正14] window.onload → DOMContentLoaded に変更
-        // =====================================================
         document.addEventListener('DOMContentLoaded', () => {
             loadData();
             renderChecklist();
