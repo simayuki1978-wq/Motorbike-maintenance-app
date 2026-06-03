@@ -19,9 +19,8 @@
             padding: 15px;
             font-size: 20px;
             font-weight: bold;
-            position: relative; /* 言語ボタンを右上配置にするため */
+            position: relative;
         }
-        /* --- [言語切り替えボタンのスタイル] --- */
         .lang-container {
             position: absolute;
             right: 15px;
@@ -43,7 +42,6 @@
             background-color: white;
             color: #007AFF;
         }
-        
         .screen {
             display: none;
             padding: 20px;
@@ -71,7 +69,6 @@
         .btn-back  { background-color: #8E8E93; }
         .btn-map   { background-color: #34C759; }
         .btn-action { background-color: #FF9500; }
-        
         .btn:disabled {
             opacity: 0.4;
             cursor: not-allowed;
@@ -117,8 +114,6 @@
             font-size: 14px;
             line-height: 1.6;
         }
-        
-        /* 警告通知（脈動アニメーション） */
         .alert-box {
             background-color: #FFE5E5;
             border-left: 5px solid #FF3B30;
@@ -134,7 +129,6 @@
             70% { box-shadow: 0 0 0 10px rgba(255, 59, 48, 0); }
             100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
         }
-        
         .badge {
             display: inline-block;
             padding: 3px 8px;
@@ -147,7 +141,6 @@
         .badge-danger { background-color: #FF3B30; }
         .badge-warning { background-color: #FF9500; }
         .badge-safe { background-color: #34C759; }
-
         .check-item {
             display: flex;
             align-items: center;
@@ -157,7 +150,6 @@
         }
         .check-item span { font-size: 24px; }
         .check-item.done label { text-decoration: line-through; color: #8E8E93; }
-        
         #toast {
             position: fixed;
             bottom: 30px;
@@ -177,7 +169,6 @@
             opacity: 1;
             transform: translateX(-50%) translateY(0);
         }
-        
         .mileage-container {
             background: #fdfdfd;
             border: 1px solid #ddd;
@@ -194,8 +185,8 @@
             padding: 10px;
             border-radius: 6px;
         }
-        #range-mileage { 
-            width: 100%; 
+        #range-mileage {
+            width: 100%;
             margin: 15px 0;
         }
         .range-ticks {
@@ -205,7 +196,6 @@
             color: #8e8e93;
             padding: 0 5px;
         }
-        
         .top-menu { text-align: center; margin-top: 50px; }
         #select-symptom {
             width: 100%;
@@ -215,11 +205,77 @@
             border: 1px solid #ccc;
         }
         #trouble-advice { display: none; margin-top: 15px; }
+
+        /* ===== バイク写真アップロード ===== */
+        .input-top-row {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        .input-controls { flex: 1; min-width: 0; }
+        #photo-drop-zone {
+            width: 130px;
+            height: 130px;
+            flex-shrink: 0;
+            border: 2px dashed #007AFF;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #F0F6FF;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+            overflow: hidden;
+            position: relative;
+        }
+        #photo-drop-zone.drag-over {
+            background-color: #D0E8FF;
+            border-color: #0055CC;
+        }
+        #photo-drop-zone.has-photo {
+            border-style: solid;
+            border-color: #34C759;
+        }
+        .drop-hint {
+            text-align: center;
+            color: #007AFF;
+            font-size: 11px;
+            padding: 6px;
+            pointer-events: none;
+        }
+        .drop-icon { font-size: 26px; display: block; margin-bottom: 4px; }
+        #photo-preview {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            display: none;
+            position: absolute;
+            top: 0; left: 0;
+        }
+        #photo-drop-zone.has-photo .drop-hint { display: none; }
+        #photo-drop-zone.has-photo #photo-preview { display: block; }
+        #photo-delete-btn {
+            display: none;
+            position: absolute;
+            top: 4px; right: 4px;
+            background: rgba(0,0,0,0.55);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 22px; height: 22px;
+            font-size: 13px;
+            line-height: 22px;
+            text-align: center;
+            cursor: pointer;
+            padding: 0;
+            z-index: 1;
+        }
+        #photo-drop-zone.has-photo #photo-delete-btn { display: block; }
+        #photo-file-input { display: none; }
     </style>
 </head>
 <body>
 
-    <!-- ヘッダーと言語切り替えボタン -->
     <div class="header">
         <span id="txt-app-title">Vietnam Bike Care</span>
         <div class="lang-container">
@@ -244,25 +300,40 @@
     <div id="screen-input" class="screen">
         <h2 id="title-input">車種・走行距離入力</h2>
         <div class="card">
-            <!-- パワーソース -->
-            <div class="input-section">
-                <div class="input-title" id="title-power">1. バイクの動力を選択</div>
-                <div class="radio-group">
-                    <label><input type="radio" name="power-source" id="rad-gasoline" checked onchange="onPowerSourceChange()"><span id="lbl-gasoline">ガソリンバイク</span></label>
-                    <label><input type="radio" name="power-source" id="rad-electric" onchange="onPowerSourceChange()"><span id="lbl-electric">電気バイク</span></label>
+            <!-- 右上写真ゾーン + 左の既存コントロールを横並びに -->
+            <div class="input-top-row">
+                <div class="input-controls">
+                    <!-- パワーソース -->
+                    <div class="input-section">
+                        <div class="input-title" id="title-power">1. バイクの動力を選択</div>
+                        <div class="radio-group">
+                            <label><input type="radio" name="power-source" id="rad-gasoline" checked onchange="onPowerSourceChange()"><span id="lbl-gasoline">ガソリンバイク</span></label>
+                            <label><input type="radio" name="power-source" id="rad-electric" onchange="onPowerSourceChange()"><span id="lbl-electric">電気バイク</span></label>
+                        </div>
+                    </div>
+                    <!-- トランスミッション -->
+                    <div class="input-section">
+                        <div class="input-title" id="title-transmission">2. 変速方式を選択</div>
+                        <div class="radio-group">
+                            <label><input type="radio" name="transmission" id="rad-at" checked onchange="updateAdvice()"><span id="lbl-at">オートマチック (AT)</span></label>
+                            <label><input type="radio" name="transmission" id="rad-mt" onchange="updateAdvice()"><span id="lbl-mt">マニュアル (MT)</span></label>
+                        </div>
+                    </div>
                 </div>
+
+                <!-- 写真アップロードゾーン（右上） -->
+                <div id="photo-drop-zone" title="クリックまたはドラッグ＆ドロップで写真を追加">
+                    <div class="drop-hint">
+                        <span class="drop-icon">🏍️</span>
+                        <span>写真をここに<br>ドロップ<br>またはタップ</span>
+                    </div>
+                    <img id="photo-preview" alt="バイク写真">
+                    <button id="photo-delete-btn" onclick="deletePhoto(event)" title="削除">✕</button>
+                </div>
+                <input type="file" id="photo-file-input" accept="image/*">
             </div>
 
-            <!-- トランスミッション -->
-            <div class="input-section">
-                <div class="input-title" id="title-transmission">2. 変速方式を選択</div>
-                <div class="radio-group">
-                    <label><input type="radio" name="transmission" id="rad-at" checked onchange="updateAdvice()"><span id="lbl-at">オートマチック (AT)</span></label>
-                    <label><input type="radio" name="transmission" id="rad-mt" onchange="updateAdvice()"><span id="lbl-mt">マニュアル (MT)</span></label>
-                </div>
-            </div>
-
-            <!-- 走行距離 -->
+            <!-- 走行距離（写真ゾーンの下、全幅） -->
             <div class="input-section">
                 <div class="input-title" id="title-mileage">3. 現在の走行距離 (1,000km単位でスクロール)</div>
                 <div class="mileage-container">
@@ -313,7 +384,6 @@
     </div>
 
     <script>
-        // グローバル言語設定
         let currentLang = 'jp';
 
         const state = {
@@ -322,7 +392,6 @@
             mileage: 0,
         };
 
-        // --- [翻訳言語マスター辞書] ---
         const i18n = {
             jp: {
                 menuInput: "バイク種類入力",
@@ -356,14 +425,15 @@
                 toastSaved: "バイクの種類と距離を保存しました 🛵 ✅",
                 causeTitle: "🔍 原因の可能性:",
                 adviceTitle: "🛠️ 対処法・アドバイス:",
-                
-                // アドバイス動的文言
                 advElectric1: "・【電気バイク】高電圧バッテリーの熱や端子の腐食をチェックしてください。",
                 advElectric2: "・【電気バイク】洗車時や激しい雨天時、インホイールモーターへの浸水に注意が必要です。",
                 advGasoline1: "・【ガソリンバイク】4輪車と異なり、1,500km〜2,000kmでのエンジンオイル交換が必須です。寿命が短いです。",
                 advGasoline2: "・【ガソリンバイク】点火プラグの煤（すす）の付着や、エアクリーナーの埃詰まりが不調に直結します。",
                 advManual: "・【マニュアル車 / ギア車】露出しているドライブチェーンの弛み（たるみ）の調整と、500km毎の注油が必須です。",
-                advAuto: "・【オートマチック車 / スクーター】クランクケース内のVベルト、ウェイトローラー、プーリーの定期点検が命です。"
+                advAuto: "・【オートマチック車 / スクーター】クランクケース内のVベルト、ウェイトローラー、プーリーの定期点検が命です。",
+                photoToastDelete: "写真を削除しました",
+                photoToastError: "画像ファイルをドロップしてください",
+                photoToastSaveError: "写真の保存に失敗しました（容量不足）"
             },
             vi: {
                 menuInput: "Nhập thông tin xe",
@@ -397,17 +467,18 @@
                 toastSaved: "Đã lưu thông tin xe thành công! 🛵 ✅",
                 causeTitle: "🔍 Nguyên nhân có thể:",
                 adviceTitle: "🛠️ Hướng dẫn xử lý:",
-
                 advElectric1: "・[Xe điện] Hãy chú ý kiểm tra nhiệt độ pin và hiện tượng rỉ sét ở các đầu cực.",
                 advElectric2: "・[Xe điện] Khi rửa xe hoặc đi mưa lớn, tuyệt đối tránh để nước ngập vào khối động cơ ở bánh xe.",
                 advGasoline1: "・[Xe xăng] Khác với ô tô, xe máy cần thay nhớt máy sau mỗi 1.500km - 2.000km vì dung tích nhớt rất ít.",
                 advGasoline2: "・[Xe xăng] Bugi bị bám muội than hoặc lọc gió bị nghẹt bụi sẽ gây hao xăng và khó nổ máy.",
                 advManual: "・[Xe số/Côn tay] Sên (xích) trần rất dễ bị chùng và khô dầu. Cần tăng sên và tra mỡ sau mỗi 500km.",
-                advAuto: "・[Xe tay ga] Cần đặc biệt lưu ý bảo dưỡng dây curoa, bi nồi và bưởng côn bên trong lốc máy."
+                advAuto: "・[Xe tay ga] Cần đặc biệt lưu ý bảo dưỡng dây curoa, bi nồi và bưởng côn bên trong lốc máy.",
+                photoToastDelete: "Đã xóa ảnh xe",
+                photoToastError: "Vui lòng thả file ảnh vào đây",
+                photoToastSaveError: "Lưu ảnh thất bại (bộ nhớ đầy)"
             }
         };
 
-        // チェックリストデータ
         const checkItemsData = {
             jp: [
                 { emoji: '🪖', label: 'ヘルメットのあご紐は締まっているか' },
@@ -429,7 +500,6 @@
 
         let currentChecklist = [];
 
-        // 故障シミュレーションデータ
         const troubleData = {
             jp: {
                 groups: [
@@ -459,28 +529,21 @@
             }
         };
 
-        // --- [多言語UIアップデート処理] ---
+        // --- 言語切り替え ---
         function switchLanguage(lang) {
             currentLang = lang;
             localStorage.setItem('app_lang', lang);
-
-            // アクティブボタンの見た目制御
             document.getElementById('btn-lang-jp').classList.toggle('active', lang === 'jp');
             document.getElementById('btn-lang-vi').classList.toggle('active', lang === 'vi');
-
             updateLanguageUI();
         }
 
         function updateLanguageUI() {
             const t = i18n[currentLang];
-
-            // TOP画面メニュー
             document.getElementById('menu-btn-input').textContent = t.menuInput;
             document.getElementById('menu-btn-pre-ride').textContent = t.menuPreRide;
             document.getElementById('menu-btn-maintenance').textContent = t.menuMaintenance;
             document.getElementById('menu-btn-trouble').textContent = t.menuTrouble;
-
-            // バイク入力画面
             document.getElementById('title-input').textContent = t.titleInput;
             document.getElementById('title-power').textContent = t.titlePower;
             document.getElementById('lbl-gasoline').textContent = t.lblGasoline;
@@ -491,30 +554,18 @@
             document.getElementById('title-mileage').textContent = t.titleMileage;
             document.getElementById('btn-save').textContent = t.btnSave;
             document.getElementById('title-advice-box').textContent = t.titleAdviceBox;
-
-            // 戻るボタン一括処理
             document.querySelectorAll('.btn-label-back').forEach(btn => btn.textContent = t.btnBack);
-
-            // 乗車前チェック画面
             document.getElementById('title-pre-ride').textContent = t.titlePreRide;
             document.getElementById('checklist-complete').textContent = t.chkComplete;
-
-            // 定期メンテナンス画面
             document.getElementById('title-maintenance').textContent = t.titleMaintenance;
-
-            // 故障画面
             document.getElementById('title-trouble').textContent = t.titleTrouble;
             document.getElementById('lbl-select-symptom-desc').textContent = t.lblSymptomDesc;
             document.getElementById('btn-map-search').textContent = t.btnMap;
-
-            // データの再描画
             initChecklistData();
             renderChecklist();
             buildSymptomSelect();
             updateAdvice();
-            
-            // メンテナンス画面が開かれている場合は再描画
-            if(document.getElementById('screen-maintenance').classList.contains('active')) {
+            if (document.getElementById('screen-maintenance').classList.contains('active')) {
                 renderMaintenance();
             }
         }
@@ -522,7 +573,6 @@
         function navigateTo(screenId) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(screenId).classList.add('active');
-
             if (screenId === 'screen-maintenance') renderMaintenance();
             if (screenId === 'screen-pre-ride')    renderChecklist();
         }
@@ -538,7 +588,6 @@
             state.isElectric = document.getElementById('rad-electric').checked;
             const radAt = document.getElementById('rad-at');
             const radMt = document.getElementById('rad-mt');
-            
             if (state.isElectric) {
                 radAt.checked = true;
                 radMt.disabled = true;
@@ -558,11 +607,9 @@
         function updateAdvice() {
             state.isElectric = document.getElementById('rad-electric').checked;
             state.isManual   = document.getElementById('rad-mt').checked;
-
             const box = document.getElementById('advice-content');
-            if(!box) return;
+            if (!box) return;
             box.innerHTML = '';
-
             const t = i18n[currentLang];
             const lines = [];
             if (state.isElectric) {
@@ -570,13 +617,7 @@
             } else {
                 lines.push(t.advGasoline1, t.advGasoline2);
             }
-            
-            if (state.isManual) {
-                lines.push(t.advManual);
-            } else {
-                lines.push(t.advAuto);
-            }
-
+            lines.push(state.isManual ? t.advManual : t.advAuto);
             lines.forEach(text => {
                 const p = document.createElement('p');
                 p.style.margin = '4px 0';
@@ -593,27 +634,20 @@
         }
 
         function loadData() {
-            // 言語のロード
             const savedLang = localStorage.getItem('app_lang') || 'jp';
             currentLang = savedLang;
-
             state.isElectric = localStorage.getItem('isElectric') === 'true';
             state.isManual   = localStorage.getItem('isManual')   === 'true';
             state.mileage    = parseInt(localStorage.getItem('mileage') || '0');
-
             document.getElementById('rad-gasoline').checked = !state.isElectric;
             document.getElementById('rad-electric').checked  = state.isElectric;
-            
             const radAt = document.getElementById('rad-at');
             const radMt = document.getElementById('rad-mt');
             radAt.checked = !state.isManual;
             radMt.checked = state.isManual;
-            
             if (state.isElectric) radMt.disabled = true;
-
             document.getElementById('range-mileage').value = state.mileage;
             document.getElementById('mileage-value').textContent = state.mileage.toLocaleString() + ' km';
-
             switchLanguage(currentLang);
         }
 
@@ -628,17 +662,14 @@
 
         function renderChecklist() {
             const container = document.getElementById('checklist-container');
-            if(!container) return;
+            if (!container) return;
             container.innerHTML = '';
-
             currentChecklist.forEach((item, i) => {
                 const div = document.createElement('div');
                 div.className = 'check-item' + (item.checked ? ' done' : '');
                 div.id = 'check-row-' + i;
-
                 const span = document.createElement('span');
                 span.textContent = item.emoji;
-
                 const label = document.createElement('label');
                 const chk = document.createElement('input');
                 chk.type = 'checkbox';
@@ -648,35 +679,29 @@
                     div.className = 'check-item' + (item.checked ? ' done' : '');
                     updateChecklistComplete();
                 });
-
                 label.appendChild(chk);
                 label.append(' ' + item.label);
                 div.appendChild(span);
                 div.appendChild(label);
                 container.appendChild(div);
             });
-
             updateChecklistComplete();
         }
 
         function updateChecklistComplete() {
-            if(currentChecklist.length === 0) return;
+            if (currentChecklist.length === 0) return;
             const allDone = currentChecklist.every(item => item.checked);
             document.getElementById('checklist-complete').style.display = allDone ? 'block' : 'none';
         }
 
         function renderMaintenance() {
-            const listContainer = document.getElementById('maintenance-list');
+            const listContainer  = document.getElementById('maintenance-list');
             const alertContainer = document.getElementById('maintenance-alert');
-            
-            listContainer.innerHTML = '';
+            listContainer.innerHTML  = '';
             alertContainer.innerHTML = '';
-
             const t = i18n[currentLang];
             const maintenanceMaster = [];
-            
-            // 言語に応じたノートを分岐記述
-            if(currentLang === 'jp') {
+            if (currentLang === 'jp') {
                 maintenanceMaster.push({ emoji: '🛑', label: 'ブレーキパッド', cycle: 5000, note: '5,000km毎にチェック。' });
                 maintenanceMaster.push({ emoji: '🔋', label: 'バッテリー(12V)', cycle: 20000, note: '20,000km毎に交換。' });
                 maintenanceMaster.push({ emoji: '🛞', label: '前後タイヤ交換', cycle: 15000, note: '15,000km毎に摩耗チェック。' });
@@ -685,7 +710,6 @@
                     maintenanceMaster.push({ emoji: '💧', label: 'ギアオイル', cycle: 5000, note: '5,000km毎に交換（スクーター）。' });
                 }
             } else {
-                // ベトナム語ノート
                 maintenanceMaster.push({ emoji: '🛑', label: 'Má phanh (Bố thắng)', cycle: 5000, note: 'Kiểm tra độ mòn bố thắng.' });
                 maintenanceMaster.push({ emoji: '🔋', label: 'Ắc quy khởi động (12V)', cycle: 20000, note: 'Thay mới sau khoảng 2 năm.' });
                 maintenanceMaster.push({ emoji: '🛞', label: 'Thay lốp xe Trước/Sau', cycle: 15000, note: 'Kiểm tra độ mòn rãnh lốp.' });
@@ -694,64 +718,54 @@
                     maintenanceMaster.push({ emoji: '💧', label: 'Nhớt láp (Xe tay ga)', cycle: 5000, note: '3 lần thay nhớt máy thì 1 lần thay nhớt láp.' });
                 }
             }
-
             const dangerousParts = [];
-
             const header = document.createElement('p');
             header.innerHTML = t.curMileage + '<b>' + state.mileage.toLocaleString() + ' km</b>';
             listContainer.appendChild(header);
             listContainer.appendChild(document.createElement('hr'));
-
             maintenanceMaster.forEach(item => {
                 let badgeClass = 'badge-safe';
-                let badgeText = t.badgeSafe;
-
+                let badgeText  = t.badgeSafe;
                 if (state.mileage > 0) {
                     const remainder = state.mileage % item.cycle;
                     if (remainder === 0 || (state.mileage >= item.cycle && remainder < 500)) {
                         badgeClass = 'badge-danger';
-                        badgeText = t.badgeDanger;
+                        badgeText  = t.badgeDanger;
                         dangerousParts.push(item.label);
                     } else if (item.cycle - remainder <= 500) {
                         badgeClass = 'badge-warning';
-                        badgeText = t.badgeWarning;
+                        badgeText  = t.badgeWarning;
                     }
                 }
-
                 const p = document.createElement('p');
                 p.style.margin = '12px 0';
-                p.innerHTML = item.emoji + ' <b>' + item.label + '</b>' + 
+                p.innerHTML = item.emoji + ' <b>' + item.label + '</b>' +
                               '<span class="badge ' + badgeClass + '">' + badgeText + '</span><br>' +
                               '<small style="color:#666;">(Cycle: ' + item.cycle.toLocaleString() + ' km / ' + item.note + ')</small>';
                 listContainer.appendChild(p);
             });
-
             if (dangerousParts.length > 0) {
                 const alertBox = document.createElement('div');
                 alertBox.className = 'alert-box';
-                alertBox.innerHTML = t.alertTitle + '<br>' + 
-                                     '<span style="font-size:12px; font-weight:normal;">' + t.alertDesc + '<br>・' + 
+                alertBox.innerHTML = t.alertTitle + '<br>' +
+                                     '<span style="font-size:12px; font-weight:normal;">' + t.alertDesc + '<br>・' +
                                      dangerousParts.join('<br>・') + '</span>';
                 alertContainer.appendChild(alertBox);
             }
         }
 
-        // 故障診断セレクトボックスの動的ビルド
         function buildSymptomSelect() {
             const select = document.getElementById('select-symptom');
-            if(!select) return;
+            if (!select) return;
             select.innerHTML = '';
-
             const placeholder = document.createElement('option');
             placeholder.value = "";
             placeholder.textContent = i18n[currentLang].selectPlaceholder;
             select.appendChild(placeholder);
-
             const data = troubleData[currentLang];
             data.groups.forEach(group => {
                 const optGroup = document.createElement('optgroup');
                 optGroup.label = group.label;
-                
                 group.symptoms.forEach(sym => {
                     const opt = document.createElement('option');
                     opt.value = sym.id;
@@ -760,53 +774,112 @@
                 });
                 select.appendChild(optGroup);
             });
-
             document.getElementById('trouble-advice').style.display = 'none';
         }
 
         function showTroubleAdvice() {
             const symptomId = document.getElementById('select-symptom').value;
             const adviceBox = document.getElementById('trouble-advice');
-
-            if (!symptomId) {
-                adviceBox.style.display = 'none';
-                return;
-            }
-
-            // 現在の言語グループ内から対象データを検索
+            if (!symptomId) { adviceBox.style.display = 'none'; return; }
             let targetSymptom = null;
-            const groups = troubleData[currentLang].groups;
-            for(let g of groups) {
+            for (let g of troubleData[currentLang].groups) {
                 const found = g.symptoms.find(s => s.id === symptomId);
-                if(found) {
-                    targetSymptom = found;
-                    break;
-                }
+                if (found) { targetSymptom = found; break; }
             }
-
-            if(!targetSymptom) return;
-
+            if (!targetSymptom) return;
             adviceBox.innerHTML = '';
             const t = i18n[currentLang];
-            
             const pCause = document.createElement('p');
             pCause.innerHTML = '<b>' + t.causeTitle + '</b><span> ' + targetSymptom.cause + '</span>';
-
             const pAdvice = document.createElement('p');
             pAdvice.innerHTML = '<b>' + t.adviceTitle + '</b><span> ' + targetSymptom.advice + '</span>';
-
             adviceBox.appendChild(pCause);
             adviceBox.appendChild(pAdvice);
             adviceBox.style.display = 'block';
         }
 
         function openGoogleMaps() {
-            const url = 'https://www.google.com/maps/search/?api=1&query=Tiệm+sửa+xe+máy';
-            window.open(url, '_blank');
+            window.open('https://www.google.com/maps/search/?api=1&query=Tiệm+sửa+xe+máy', '_blank');
+        }
+
+        // =====================================================
+        // バイク写真アップロード機能
+        // =====================================================
+        function initPhotoZone() {
+            const zone  = document.getElementById('photo-drop-zone');
+            const input = document.getElementById('photo-file-input');
+
+            // クリックでファイル選択ダイアログを開く
+            zone.addEventListener('click', (e) => {
+                if (e.target.id === 'photo-delete-btn') return;
+                input.click();
+            });
+
+            // ファイル選択ダイアログから選択
+            input.addEventListener('change', () => {
+                if (input.files && input.files[0]) applyPhoto(input.files[0]);
+            });
+
+            // ドラッグ＆ドロップ
+            zone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                zone.classList.add('drag-over');
+            });
+            zone.addEventListener('dragleave', () => {
+                zone.classList.remove('drag-over');
+            });
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                zone.classList.remove('drag-over');
+                const file = e.dataTransfer.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    applyPhoto(file);
+                } else {
+                    showToast(i18n[currentLang].photoToastError);
+                }
+            });
+
+            // 保存済み写真の復元
+            const saved = localStorage.getItem('bikePhoto');
+            if (saved) setPhotoPreview(saved);
+        }
+
+        function applyPhoto(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const dataUrl = e.target.result;
+                setPhotoPreview(dataUrl);
+                try {
+                    localStorage.setItem('bikePhoto', dataUrl);
+                } catch (err) {
+                    showToast(i18n[currentLang].photoToastSaveError);
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function setPhotoPreview(dataUrl) {
+            const zone    = document.getElementById('photo-drop-zone');
+            const preview = document.getElementById('photo-preview');
+            preview.src = dataUrl;
+            zone.classList.add('has-photo');
+        }
+
+        function deletePhoto(e) {
+            e.stopPropagation();
+            const zone    = document.getElementById('photo-drop-zone');
+            const preview = document.getElementById('photo-preview');
+            const input   = document.getElementById('photo-file-input');
+            preview.src = '';
+            input.value = '';
+            zone.classList.remove('has-photo');
+            localStorage.removeItem('bikePhoto');
+            showToast(i18n[currentLang].photoToastDelete);
         }
 
         document.addEventListener('DOMContentLoaded', () => {
             loadData();
+            initPhotoZone();
         });
     </script>
 </body>
