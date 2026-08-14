@@ -9,11 +9,11 @@
             font-family: 'Helvetica Neue', Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f5f5f5;
+            background-color: #fce4ec;
             color: #333;
         }
         .header {
-            background-color: #007AFF;
+            background-color: #d32f2f;
             color: white;
             text-align: center;
             padding: 15px;
@@ -40,7 +40,7 @@
         }
         .btn-lang.active {
             background-color: white;
-            color: #007AFF;
+            color: #d32f2f;
         }
         .screen {
             display: none;
@@ -57,18 +57,24 @@
             max-width: 300px;
             margin: 15px auto;
             padding: 15px;
-            background-color: #007AFF;
+            background-color: #d32f2f;
             color: white;
             text-align: center;
             border: none;
-            border-radius: 8px;
+            border-radius: 30px;
             font-size: 16px;
+            font-weight: bold;
             cursor: pointer;
             text-decoration: none;
+            transition: 0.3s;
         }
+        .btn:hover { background-color: #b71c1c; transform: scale(1.03); }
         .btn-back  { background-color: #8E8E93; }
+        .btn-back:hover { background-color: #6e6e73; }
         .btn-map   { background-color: #34C759; }
+        .btn-map:hover { background-color: #248a3d; }
         .btn-action { background-color: #FF9500; }
+        .btn-action:hover { background-color: #cc7700; }
         .btn:disabled {
             opacity: 0.4;
             cursor: not-allowed;
@@ -106,9 +112,9 @@
             cursor: pointer;
         }
         .advice-box {
-            background-color: #E5F1FF;
+            background-color: #fce4ec;
             padding: 15px;
-            border-left: 5px solid #007AFF;
+            border-left: 5px solid #d32f2f;
             margin-top: 15px;
             border-radius: 4px;
             font-size: 14px;
@@ -178,10 +184,10 @@
         .mileage-display {
             font-size: 24px;
             font-weight: bold;
-            color: #007AFF;
+            color: #d32f2f;
             text-align: center;
             margin: 10px 0;
-            background: #eef6ff;
+            background: #fce4ec;
             padding: 10px;
             border-radius: 6px;
         }
@@ -217,21 +223,21 @@
             width: 130px;
             height: 130px;
             flex-shrink: 0;
-            border: 2px dashed #007AFF;
+            border: 2px dashed #d32f2f;
             border-radius: 10px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            background-color: #F0F6FF;
+            background-color: #fce4ec;
             cursor: pointer;
             transition: background-color 0.2s, border-color 0.2s;
             overflow: hidden;
             position: relative;
         }
         #photo-drop-zone.drag-over {
-            background-color: #D0E8FF;
-            border-color: #0055CC;
+            background-color: #f8bbd0;
+            border-color: #b71c1c;
         }
         #photo-drop-zone.has-photo {
             border-style: solid;
@@ -239,7 +245,7 @@
         }
         .drop-hint {
             text-align: center;
-            color: #007AFF;
+            color: #d32f2f;
             font-size: 11px;
             padding: 6px;
             pointer-events: none;
@@ -289,6 +295,7 @@
     <!-- 1. TOP画面 -->
     <div id="screen-top" class="screen active">
         <div class="top-menu">
+            <a href="../index.html" style="display:inline-block; font-size:13px; color:#b71c1c; text-decoration:none; margin-bottom:20px;" id="link-home">🏠 アプリ選択に戻る</a>
             <button class="btn" id="menu-btn-input" onclick="navigateTo('screen-input')">バイク種類入力</button>
             <button class="btn" id="menu-btn-pre-ride" onclick="navigateTo('screen-pre-ride')">乗車前チェック</button>
             <button class="btn" id="menu-btn-maintenance" onclick="navigateTo('screen-maintenance')">定期メンテナンス</button>
@@ -394,6 +401,7 @@
 
         const i18n = {
             jp: {
+                linkHome: "🏠 アプリ選択に戻る",
                 menuInput: "バイク種類入力",
                 menuPreRide: "乗車前チェック",
                 menuMaintenance: "定期メンテナンス",
@@ -436,6 +444,7 @@
                 photoToastSaveError: "写真の保存に失敗しました（容量不足）"
             },
             vi: {
+                linkHome: "🏠 Quay lại chọn ứng dụng",
                 menuInput: "Nhập thông tin xe",
                 menuPreRide: "Kiểm tra trước khi đi",
                 menuMaintenance: "Lịch bảo dưỡng định kỳ",
@@ -540,6 +549,7 @@
 
         function updateLanguageUI() {
             const t = i18n[currentLang];
+            document.getElementById('link-home').textContent = t.linkHome;
             document.getElementById('menu-btn-input').textContent = t.menuInput;
             document.getElementById('menu-btn-pre-ride').textContent = t.menuPreRide;
             document.getElementById('menu-btn-maintenance').textContent = t.menuMaintenance;
